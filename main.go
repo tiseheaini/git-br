@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -33,6 +34,17 @@ type Job struct {
 	branch string
 }
 
+func GetCurrentDirectory() string {
+	//返回绝对路径  filepath.Dir(os.Args[0])去除最后一个元素的路径
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//将\替换成/
+	return strings.Replace(dir, "\\", "/", -1)
+}
+
 func getBranchDesc(showBranchResult [][]string, index int, branch string) {
 	defer wg.Done()
 
@@ -40,8 +52,8 @@ func getBranchDesc(showBranchResult [][]string, index int, branch string) {
 	cleanDesc := strings.TrimSpace(strings.Trim(branch, "*"))
 	branchDesc := "branch." + cleanDesc + ".description"
 	cmd := exec.Command("git", "config", branchDesc)
-	pwd, _ := os.Getwd()
-	cmd.Dir = pwd
+	// pwd, _ := os.Getwd()
+	cmd.Dir = GetCurrentDirectory()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		descText = ""
@@ -62,10 +74,7 @@ func main() {
 	}
 	allBranchList := strings.Split(string(out), "\n")
 
-	var showBranchResult [][]string
-	for i := 0; i < len(allBranchList); i++ {
-		showBranchResult = append(showBranchResult, []string{})
-	}
+	showBranchResult := make([][]string, len(allBranchList))
 
 	go func() {
 		for index, branch := range allBranchList {
